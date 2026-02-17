@@ -6,6 +6,6 @@ import com.campus360.solicitudes.Dominio.Adjunto;
 
  public interface ISolicitudCommandService {
      public boolean servRegistrarSolicitud(SolicitudCreateDTO dto,ArrayList <Adjunto> adjuntos);
-     public boolean anularSolicitud(int solicitudId);
+     public boolean servAnularSolicitud(int solicitudId);
 
  }

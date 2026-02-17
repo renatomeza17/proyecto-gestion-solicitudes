@@ -50,7 +50,7 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
          solicitud.calcularSLA();
          
          solicitud.setSolicitante(solicitante);
-         solicitud.setEstado("POR REVISAR");
+         solicitud.setEstado("PENDIENTE");
          solicitud.crear();
 
 
@@ -93,13 +93,26 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
      }
 
 
-     public boolean anularSolicitud(int solicitudId){
-         boolean anulacionExitosa=false;
-        repoSolicitud.deleteById(solicitudId);
-         //logica de anulación
+     public boolean servAnularSolicitud(int solicitudId){
+         
+        Solicitud porEliminar=repoSolicitud.findById(solicitudId).orElse(null);
 
-         anulacionExitosa=true;
-         return anulacionExitosa;
+        String estado=porEliminar.getEstado();
+
+
+         if("PENDIENTE".equals(estado)){
+            repoSolicitud.deleteById(solicitudId);
+            return true;
+         }
+         else{
+            
+            return false;
+            
+         }
+        
+    
+
+         
      }
 
 
