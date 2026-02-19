@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -94,8 +94,15 @@ public class SolicitudController {
 
 
     @GetMapping("/{id}")
-    public Solicitud consultarSolicitud(@PathVariable Integer id){
-        return servSolicitud.obtenerDetalleCompleto(id);
+    public ResponseEntity<?> consultarSolicitud(@PathVariable Integer id, @RequestHeader(value = "X-User-Role", required = false) String rol){
+        String rolUsuario = (rol != null) ? rol : "ESTUDIANTE";
+        Solicitud resultado=servSolicitud.obtenerDetalleCompleto(id,rolUsuario);
+        
+        if (resultado == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Solicitud no encontrada");
+    }
+
+    return ResponseEntity.ok(resultado);
     }
 
 
@@ -226,6 +233,14 @@ private String guardarArchivoEnDisco(MultipartFile file) {
         
 
     }
+
+
+    @GetMapping("/listar")
+    public ResponseEntity<List<Solicitud>> listarSolicitudes(){
+        List<Solicitud> solicitudes=servSolicitud.servListarSolicitudes();
+        return ResponseEntity.ok().body(solicitudes);
+    }
+    
 
 
 

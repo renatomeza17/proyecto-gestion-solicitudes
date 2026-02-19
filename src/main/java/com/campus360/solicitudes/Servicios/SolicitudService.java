@@ -3,6 +3,7 @@ package com.campus360.solicitudes.Servicios;
 import java.util.ArrayList;
 import java.util.List;
 
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -86,8 +87,23 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
      }
 
 
-     public Solicitud obtenerDetalleCompleto(int solicitudId){
+     public Solicitud obtenerDetalleCompleto(int solicitudId, String rol){
+        
          Solicitud solicitud = repoSolicitud.findById(solicitudId).orElse(null);
+         if (solicitud != null) {
+        // REGLA DE NEGOCIO: Si es APROBADOR y el estado es PENDIENTE
+        // Usamos .equalsIgnoreCase por si el frontend manda "aprobador" en minúsculas
+        if ("APROBADOR".equalsIgnoreCase(rol) && "PENDIENTE".equalsIgnoreCase(solicitud.getEstado())) {
+            
+            solicitud.setEstado("EN PROCESO");
+            repoSolicitud.save(solicitud);
+            
+            // Opcional: Aquí podrías registrar en tu tabla de historial
+            
+            System.out.println("Estado actualizado a EN PROCESO por acceso de Aprobador");
+        }
+    }                      
+
          //lógica para calulcar estado de sla
          return solicitud;
      }
@@ -115,6 +131,25 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
          
      }
 
+
+     public List<Solicitud> servListarSolicitudes(){
+        return repoSolicitud.findAll();
+     }
+
+
+
+
+    //  public String obtenerRol(Authentication auth) {
+    // // Esto extrae el primer rol que encuentre (ej. "ROLE_ESTUDIANTE")
+    // return auth.getAuthorities().stream()
+    //            .map(GrantedAuthority::getAuthority)
+    //            .findFirst()
+    //            .orElse("SIN_ROL");
+    // }
+
+    // public String obtenerUsername(Authentication auth) {
+    // return auth.getName(); // Retorna el código de alumno o username
+    // }
 
 
 
