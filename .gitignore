@@ -33,3 +33,7 @@ build/
 .vscode/
 
 application-dev.properties
+
+# Ignorar archivos subidos por los usuarios
+/uploads/**
+!/uploads/.gitkeep

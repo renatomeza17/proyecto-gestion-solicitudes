@@ -51,13 +51,14 @@ public class Adjunto {
 
     // Constructor completo
     public Adjunto(int idAdjunto, String nombreArchivo, String tipoArchivo, 
-                   double tamañoKB, String ruta, Date fechaCarga) {
+                   double tamañoKB, String ruta, Date fechaCarga, Solicitud solicitud) {
         this.idAdjunto = idAdjunto;
         this.nombreArchivo = nombreArchivo;
         this.tipoArchivo = tipoArchivo;
         this.tamañoKB = tamañoKB;
         this.ruta = ruta;
         this.fechaCarga = fechaCarga;
+        this.solicitud=solicitud;
     }
 
   // --- Métodos de Comportamiento ---
@@ -66,7 +67,7 @@ public class Adjunto {
         // Lógica de dominio: ejemplo para permitir solo imágenes y documentos
         if (tipoArchivo == null) return false;
         String ext = tipoArchivo.toLowerCase();
-        return ext.equals("pdf") || ext.equals("jpg") || ext.equals("png");
+        return ext.contains("pdf") || ext.contains("jpg") || ext.contains("png");
     }
 
     public boolean validarTamaño() {
@@ -134,6 +135,14 @@ public class Adjunto {
 
     public void setFechaCarga(Date fechaCarga) {
         this.fechaCarga = fechaCarga;
+    }
+
+    public Solicitud getSolicitud(){
+        return solicitud;
+    }
+
+    public void setSolicitud(Solicitud solicitud){
+        this.solicitud=solicitud;
     }
 
 }

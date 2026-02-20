@@ -44,25 +44,32 @@ public class HistorialEstado {
     @JoinColumn(name = "id_solicitud", nullable = false)
     private Solicitud solicitud; // Clave foránea para conectar con la tabla principal
 
+    
+
     // Constructor vacío
     public HistorialEstado() {
     }
 
     // Constructor con parámetros
     public HistorialEstado(int idHistorial, Date fechaCambio, String estadoAnterior, 
-                           String estadoNuevo, String comentario, Usuario usuarioResponsable) {
+                           String estadoNuevo, String comentario, Usuario usuarioResponsable, Solicitud solicitud) {
         this.idHistorial = idHistorial;
         this.fechaCambio = fechaCambio;
         this.estadoAnterior = estadoAnterior;
         this.estadoNuevo = estadoNuevo;
         this.comentario = comentario;
         this.usuarioResponsable = usuarioResponsable;
+        this.solicitud=solicitud;
     }
 
   // --- Métodos de Comportamiento ---
     public void registrarCambio() {
-        // Aquí iría la lógica para persistir el cambio en una base de datos 
+        // Aquí iría la lógica para persistir el cambio en una base de datos
+
+
         // o realizar alguna acción específica.
+
+
         System.out.println("Registrando cambio de estado...");
     }
 
@@ -113,6 +120,14 @@ public class HistorialEstado {
 
     public void setUsuarioResponsable(Usuario usuarioResponsable) {
         this.usuarioResponsable = usuarioResponsable;
+    }
+
+    public Solicitud getSolicitud() {
+        return solicitud;
+    }
+
+    public void setSolicitud(Solicitud solicitud) {
+        this.solicitud = solicitud;
     }
 
 }

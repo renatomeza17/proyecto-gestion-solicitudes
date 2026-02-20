@@ -19,8 +19,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,9 +30,11 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.campus360.solicitudes.DTOs.ActualizarSolicitudDTO;
 import com.campus360.solicitudes.DTOs.SolicitudCreateDTO;
+import com.campus360.solicitudes.DTOs.SolicitudDTO;
 import com.campus360.solicitudes.Dominio.Adjunto;
-import com.campus360.solicitudes.Dominio.Solicitud;
+// import com.campus360.solicitudes.Dominio.Solicitud;
 // import com.campus360.solicitudes.Dominio.Usuario;
 import com.campus360.solicitudes.Servicios.ISolicitudCommandService;
 import com.campus360.solicitudes.Servicios.ISolicitudQueryService;
@@ -88,7 +92,7 @@ public class SolicitudController {
 
 
     @GetMapping
-    public List<Solicitud> listarSolicitudes(@RequestParam Integer usuarioId){
+    public List<SolicitudDTO> listarSolicitudes(@RequestParam Integer usuarioId){
         return servSolicitud.servObtenerHistorial(usuarioId);
     }
 
@@ -96,8 +100,8 @@ public class SolicitudController {
     @GetMapping("/{id}")
     public ResponseEntity<?> consultarSolicitud(@PathVariable Integer id, @RequestHeader(value = "X-User-Role", required = false) String rol){
         String rolUsuario = (rol != null) ? rol : "ESTUDIANTE";
-        Solicitud resultado=servSolicitud.obtenerDetalleCompleto(id,rolUsuario);
-        
+        SolicitudDTO resultado = servSolicitud.obtenerDetalleCompleto(id, rolUsuario);
+
         if (resultado == null) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Solicitud no encontrada");
     }
@@ -236,10 +240,25 @@ private String guardarArchivoEnDisco(MultipartFile file) {
 
 
     @GetMapping("/listar")
-    public ResponseEntity<List<Solicitud>> listarSolicitudes(){
-        List<Solicitud> solicitudes=servSolicitud.servListarSolicitudes();
+    public ResponseEntity<List<SolicitudDTO>> listarSolicitudes(){
+        List<SolicitudDTO> solicitudes=servSolicitud.servListarSolicitudes();
         return ResponseEntity.ok().body(solicitudes);
     }
+
+    @PatchMapping("/actualizar/{id}")
+    public ResponseEntity<?> actualizarSolicitud(@PathVariable Integer id, @RequestBody ActualizarSolicitudDTO dto,@RequestHeader(value = "X-User-Role", required = true) String rol){
+
+        boolean actualizado=servSolicitud.servActualizarSolicitud(id,dto, rol);
+        if(actualizado){
+            return ResponseEntity.ok().body("{ \"mensaje\": \"La solicitud ha sido actualizada correctamente\" ");
+        }
+        else{
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("\"mensaje\": \"La solicitud NO se pudo actualizar\"");
+        }
+    }
+
+
+    
     
 
 

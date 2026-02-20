@@ -19,6 +19,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.ToString;
 
@@ -76,6 +77,7 @@ public class Solicitud {
 
     @ToString.Exclude
     @OneToMany(mappedBy = "solicitud",cascade = CascadeType.ALL)
+    @OrderBy("idHistorial ASC")
     private List<HistorialEstado> historial=new ArrayList<>();
 
     
@@ -104,6 +106,17 @@ public class Solicitud {
             this.fechaCreacion = new Date();
         }
         this.estado = "PENDIENTE";
+        HistorialEstado historia=new HistorialEstado();
+
+        historia.setFechaCambio(fechaCreacion);
+        historia.setEstadoAnterior(null);
+        historia.setEstadoNuevo(estado);
+        historia.setComentario("Creación de historial"+ historia.getIdHistorial());
+        historia.setUsuarioResponsable(solicitante);
+        historia.setSolicitud(this);
+
+        historial.add(historia);
+
         System.out.println("Solicitud creada con fecha: " + fechaCreacion);
     }
 
@@ -129,6 +142,7 @@ public class Solicitud {
     public void agregarAdjunto(Adjunto a) {
         if (a != null && a.validarTipo()) {
             this.adjuntos.add(a);
+            a.setSolicitud(this);
         }
     }
 

@@ -1,17 +1,22 @@
 package com.campus360.solicitudes.Servicios;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.campus360.solicitudes.DTOs.ActualizarSolicitudDTO;
 import com.campus360.solicitudes.DTOs.SolicitudCreateDTO;
+import com.campus360.solicitudes.DTOs.SolicitudDTO;
 import com.campus360.solicitudes.Dominio.Adjunto;
+import com.campus360.solicitudes.Dominio.HistorialEstado;
 import com.campus360.solicitudes.Dominio.Solicitud;
 import com.campus360.solicitudes.Dominio.Usuario;
 import com.campus360.solicitudes.Repositorio.IAlmacenamiento;
+
 import com.campus360.solicitudes.Repositorio.ISolicitudRepository;
 import com.campus360.solicitudes.Repositorio.IUsuarioRepository;
 
@@ -24,6 +29,7 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
     private ISolicitudRepository repoSolicitud;
     @Autowired
     private IUsuarioRepository repoUsuario;
+  
 
     
     @Autowired
@@ -58,6 +64,7 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
          // 5. LO QUE FALTA: Procesar y vincular adjuntos
         if (adjuntos != null && !adjuntos.isEmpty()) {
             for (Adjunto adj : adjuntos) {
+                adj.setSolicitud(solicitud);
                 // Usas tu método 'agregarAdjunto' que ya tienes
                 solicitud.agregarAdjunto(adj); 
                 
@@ -65,11 +72,12 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
                 // almacenamiento.guardarAdjunto(adj); 
             }
         }
-         
+
 
 
 
          repoSolicitud.save(solicitud);
+         
 
          return registroExitoso;
    
@@ -82,12 +90,15 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
     }
 
 
-    public List<Solicitud> servObtenerHistorial(Integer usuarioID){ 
-         return repoSolicitud.findBySolicitanteIdUsuario(usuarioID);
+    public List<SolicitudDTO> servObtenerHistorial(Integer usuarioID){ 
+        List<Solicitud> solicitudes = repoSolicitud.findBySolicitanteIdUsuario(usuarioID);
+         return solicitudes.stream()
+                      .map(sol -> new SolicitudDTO(sol))
+                      .collect(Collectors.toList());
      }
 
 
-     public Solicitud obtenerDetalleCompleto(int solicitudId, String rol){
+     public SolicitudDTO obtenerDetalleCompleto(int solicitudId, String rol){
         
          Solicitud solicitud = repoSolicitud.findById(solicitudId).orElse(null);
          if (solicitud != null) {
@@ -96,17 +107,28 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
         if ("APROBADOR".equalsIgnoreCase(rol) && "PENDIENTE".equalsIgnoreCase(solicitud.getEstado())) {
             
             solicitud.setEstado("EN PROCESO");
-            repoSolicitud.save(solicitud);
+            
             
             // Opcional: Aquí podrías registrar en tu tabla de historial
-            
+            HistorialEstado h = new HistorialEstado();
+            h.setEstadoAnterior("PENDIENTE");
+            h.setEstadoNuevo("EN PROCESO");
+            h.setComentario("Visto por el aprobador");
+            h.setFechaCambio(new Date());
+            h.setSolicitud(solicitud);
+
+            solicitud.getHistorial().add(h);
+
+            repoSolicitud.save(solicitud);
+
             System.out.println("Estado actualizado a EN PROCESO por acceso de Aprobador");
         }
+         //lógica para calulcar estado de sla
+         return new SolicitudDTO(solicitud);
     }                      
 
-         //lógica para calulcar estado de sla
-         return solicitud;
-     }
+       return null; 
+    }
 
 
      public boolean servAnularSolicitud(int solicitudId){
@@ -132,8 +154,38 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
      }
 
 
-     public List<Solicitud> servListarSolicitudes(){
-        return repoSolicitud.findAll();
+     public List<SolicitudDTO> servListarSolicitudes(){
+        List<Solicitud> solicitudes = repoSolicitud.findAll();
+
+        return solicitudes.stream()
+                      .map(s -> new SolicitudDTO(s))
+                      .collect(Collectors.toList());
+        
+     }
+
+
+     public boolean servActualizarSolicitud(Integer idSolicitud,ActualizarSolicitudDTO dto, String rol){
+        Solicitud solicitud = repoSolicitud.findById(idSolicitud).orElse(null);
+        if ("APROBADOR".equalsIgnoreCase(rol)){
+            solicitud.setEstado(dto.getEstado());
+
+            //Se guarda en el historial
+            HistorialEstado h = new HistorialEstado();
+            h.setEstadoAnterior(solicitud.getEstado());
+            h.setEstadoNuevo(dto.getEstado());
+            h.setComentario(dto.getComentario());
+            h.setFechaCambio(new Date());
+            h.setSolicitud(solicitud);
+
+            solicitud.getHistorial().add(h);
+            
+            repoSolicitud.save(solicitud);
+            return true;
+        }
+        else{
+            return false;
+        }
+
      }
 
 
