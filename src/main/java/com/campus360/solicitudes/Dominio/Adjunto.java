@@ -54,7 +54,7 @@ public class Adjunto {
 
     // Constructor completo
     public Adjunto(int idAdjunto, String nombreArchivo, String tipoArchivo, 
-                   double tamañoKB, String ruta, Date fechaCarga, String estado; Solicitud solicitud) {
+                   double tamañoKB, String ruta, Date fechaCarga, String estado, Solicitud solicitud) {
         this.idAdjunto = idAdjunto;
         this.nombreArchivo = nombreArchivo;
         this.tipoArchivo = tipoArchivo;
