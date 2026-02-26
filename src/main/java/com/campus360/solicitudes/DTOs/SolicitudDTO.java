@@ -15,6 +15,10 @@ public class SolicitudDTO {
     private String prioridad;
     private Date fechaCreacion;
     private String nombreSolicitante;
+    private Date fechaLimite; // Para que vea el calendario
+    private String tiempoRestante; // Ejemplo: "Faltan 2 días" o "Pausado"
+    private String indicadorSla; // Ejemplo: "A TIEMPO", "VENCIDO" o "PAUSADO"
+
     private List<HistorialDTO> historial;
     private List<AdjuntoDTO> adjuntos;
 
@@ -27,7 +31,14 @@ public class SolicitudDTO {
         this.estado = sol.getEstado();
         this.prioridad = sol.getPrioridad();
         this.fechaCreacion = sol.getFechaCreacion();
+        this.fechaLimite = sol.getFechaLimite();
         this.nombreSolicitante = sol.getSolicitante().getNombre();
+
+        // El DTO solo formatea el resultado que el DOMINIO ya procesó
+        this.indicadorSla = sol.calcularEstadoSlaAmigable(); 
+        this.tiempoRestante = (this.indicadorSla.equals("PAUSADO")) 
+                            ? "Reloj detenido" 
+                            : "Revisar fecha límite";
         
         // Convertimos la lista de entidades a lista de DTOs
         this.historial = sol.getHistorial().stream()
@@ -88,8 +99,38 @@ public class SolicitudDTO {
         return nombreSolicitante;
     }
 
+
     public void setNombreSolicitante(String nombreSolicitante) {
         this.nombreSolicitante = nombreSolicitante;
+    }
+
+       public Date getFechaLimite() {
+        return fechaLimite;
+    }
+
+
+    public void setFechaLimite(Date fechaLimite) {
+        this.fechaLimite = fechaLimite;
+    }
+
+
+    public String getTiempoRestante() {
+        return tiempoRestante;
+    }
+
+
+    public void setTiempoRestante(String tiempoRestante) {
+        this.tiempoRestante = tiempoRestante;
+    }
+
+
+    public String getIndicadorSla() {
+        return indicadorSla;
+    }
+
+
+    public void setIndicadorSla(String indicadorSla) {
+        this.indicadorSla = indicadorSla;
     }
 
     public List<HistorialDTO> getHistorial() {

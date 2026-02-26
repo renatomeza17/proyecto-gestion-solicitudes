@@ -1,5 +1,10 @@
 package com.campus360.solicitudes.Servicios;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -7,6 +12,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.campus360.solicitudes.DTOs.ActualizarSolicitudDTO;
 import com.campus360.solicitudes.DTOs.SolicitudCreateDTO;
@@ -52,11 +58,13 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
         solicitud.setCatalogoId(dto.getCatalogoId());
         solicitud.setDescripcion(dto.getDescripcion());
         solicitud.setPrioridad(dto.getPrioridad());
+
+         
+         solicitud.setSolicitante(solicitante);
     
          //Logica para cacular sla
          solicitud.calcularSLA();
-         
-         solicitud.setSolicitante(solicitante);
+        
          solicitud.setEstado("PENDIENTE");
          solicitud.crear();
 
@@ -119,6 +127,7 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
 
             solicitud.getHistorial().add(h);
 
+            solicitud.actualizarSeguimientoSLA("EN PROCESO");
             repoSolicitud.save(solicitud);
 
             System.out.println("Estado actualizado a EN PROCESO por acceso de Aprobador");
@@ -164,28 +173,117 @@ public class SolicitudService implements ISolicitudCommandService, ISolicitudQue
      }
 
 
-     public boolean servActualizarSolicitud(Integer idSolicitud,ActualizarSolicitudDTO dto, String rol){
+
+
+
+     public String guardarArchivoEnDisco(MultipartFile file) {
+            try {
+                // 1. Definimos la carpeta "uploads" dentro de la raíz del proyecto
+                String rootPath = System.getProperty("user.dir");
+                String nombreCarpeta = "uploads";
+
+                // 2. Creamos el objeto File para la subcarpeta
+                File directory = new File(rootPath, nombreCarpeta);
+
+                // 3. Si la subcarpeta no existe, la creamos
+                if (!directory.exists()) {
+                    directory.mkdirs();
+                }
+
+                // 4. Generar nombre único (Timestamp + nombre original)
+                String nombreUnico = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+
+                // 5. Usamos Paths.get con dos argumentos para que Java ponga el "/" o "\" correcto
+                Path rutaDestino = Paths.get(directory.getAbsolutePath(), nombreUnico);
+
+                // 6. Escribimos los bytes del archivo
+                Files.write(rutaDestino, file.getBytes());
+
+                // 7. Retornamos la ruta absoluta para guardarla en la base de datos
+                return rutaDestino.toString();
+
+            } catch (IOException e) {
+                throw new RuntimeException("Error al escribir el archivo en el servidor: " + e.getMessage());
+            }
+    }
+
+
+    public List<Adjunto> procesarArchivos(List<MultipartFile> archivos, Solicitud solicitud) {
+    List<Adjunto> lista = new ArrayList<>();
+    
+    if (archivos != null && !archivos.isEmpty()) {
+        for (MultipartFile archivo : archivos) {
+            if (!archivo.isEmpty()) {
+                // Llamamos a tu lógica de escritura física
+                String rutaEnDisco = guardarArchivoEnDisco(archivo);
+                
+                // Creamos el objeto para la Base de Datos
+                Adjunto adj = new Adjunto();
+                adj.setNombreArchivo(archivo.getOriginalFilename());
+                adj.setRuta(rutaEnDisco); // Guardamos el String de la ruta
+                adj.setTipoArchivo(archivo.getContentType());
+                adj.setSolicitud(solicitud); // Vinculamos a la solicitud actual
+                
+                lista.add(adj);
+            }
+        }
+    }
+    return lista;
+}
+
+
+
+
+
+
+     public boolean servActualizarSolicitud(Integer idSolicitud,ActualizarSolicitudDTO dto, String rol, List<MultipartFile> nuevosAdjuntos){
         Solicitud solicitud = repoSolicitud.findById(idSolicitud).orElse(null);
-        if ("APROBADOR".equalsIgnoreCase(rol)){
-            solicitud.setEstado(dto.getEstado());
+        
+        String estadoAnterior = solicitud.getEstado();
+        String nuevoEstado = dto.getEstado();
+        
+        // 1. VALIDACIÓN DE PERMISOS POR ROL
+                if ("ESTUDIANTE".equalsIgnoreCase(rol)) {
+                    // El estudiante SOLO puede corregir si la solicitud está OBSERVADA
+                    if (!"OBSERVADO".equalsIgnoreCase(solicitud.getEstado())) {
+                        return false; 
+                    }
+                    // Forzamos que el estado pase a PENDIENTE al subsanar
+                    nuevoEstado = "PENDIENTE";
+                } 
+                else if (!"APROBADOR".equalsIgnoreCase(rol)) {
+                    // Si no es ni estudiante ni aprobador, no tiene permiso
+                    return false;
+                }
 
-            //Se guarda en el historial
-            HistorialEstado h = new HistorialEstado();
-            h.setEstadoAnterior(solicitud.getEstado());
-            h.setEstadoNuevo(dto.getEstado());
-            h.setComentario(dto.getComentario());
-            h.setFechaCambio(new Date());
-            h.setSolicitud(solicitud);
+                List<Adjunto> newAdjuntos = procesarArchivos(nuevosAdjuntos, solicitud);
+                solicitud.getAdjuntos().addAll(newAdjuntos);
 
-            solicitud.getHistorial().add(h);
-            
-            repoSolicitud.save(solicitud);
-            return true;
-        }
-        else{
-            return false;
-        }
+                // 2. ACTUALIZACIÓN INTELIGENTE DEL SLA
+                // Aquí es donde el tiempo se reanuda y la fecha límite se "empuja" hacia adelante
+                solicitud.actualizarSeguimientoSLA(nuevoEstado);
 
+
+                // Agregamos nuevos archivos si existen
+                if (nuevosAdjuntos != null) {
+                    for (Adjunto adj : newAdjuntos) {
+                        solicitud.agregarAdjunto(adj);
+                    }
+    }
+
+                // 3. REGISTRO EN EL HISTORIAL
+                HistorialEstado h = new HistorialEstado();
+                h.setEstadoAnterior(estadoAnterior);
+                h.setEstadoNuevo(nuevoEstado);
+                h.setComentario(dto.getComentario());
+                h.setFechaCambio(new Date());
+                h.setSolicitud(solicitud);
+
+                solicitud.getHistorial().add(h);
+
+                // 4. PERSISTENCIA
+                repoSolicitud.save(solicitud);
+                return true;
      }
 
 

@@ -1,13 +1,8 @@
 package com.campus360.solicitudes.Controller;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import java.nio.file.Path;
 
 
 import org.springframework.http.MediaType;
@@ -22,7 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -121,8 +116,8 @@ public ResponseEntity<?> crearSolicitud(
         // 1. Procesar los archivos físicos si es que el usuario envió alguno
         if (archivos != null && !archivos.isEmpty()) {
             for (MultipartFile file : archivos) {
-                // Guardamos en el disco duro y obtenemos la ruta -  LLAMO AL OTRO METODO DE ABAJO 
-                String rutaFisica = guardarArchivoEnDisco(file);
+                // Guardamos en el disco duro y obtenemos la ruta -  LLAMO AL OTRO METODO DE service
+                String rutaFisica = servSolicitud.guardarArchivoEnDisco(file);
 
                 // Creamos el objeto Adjunto que se guardará en MySQL
                 Adjunto adj = new Adjunto();
@@ -152,36 +147,7 @@ public ResponseEntity<?> crearSolicitud(
 
 
 
-private String guardarArchivoEnDisco(MultipartFile file) {
-    try {
-        // 1. Definimos la carpeta "uploads" dentro de la raíz del proyecto
-        String rootPath = System.getProperty("user.dir");
-        String nombreCarpeta = "uploads";
 
-        // 2. Creamos el objeto File para la subcarpeta
-        File directory = new File(rootPath, nombreCarpeta);
-
-        // 3. Si la subcarpeta no existe, la creamos
-        if (!directory.exists()) {
-            directory.mkdirs();
-        }
-
-        // 4. Generar nombre único (Timestamp + nombre original)
-        String nombreUnico = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-
-        // 5. Usamos Paths.get con dos argumentos para que Java ponga el "/" o "\" correcto
-        Path rutaDestino = Paths.get(directory.getAbsolutePath(), nombreUnico);
-
-        // 6. Escribimos los bytes del archivo
-        Files.write(rutaDestino, file.getBytes());
-
-        // 7. Retornamos la ruta absoluta para guardarla en la base de datos
-        return rutaDestino.toString();
-
-    } catch (IOException e) {
-        throw new RuntimeException("Error al escribir el archivo en el servidor: " + e.getMessage());
-    }
-}
 
 
 
@@ -246,11 +212,13 @@ private String guardarArchivoEnDisco(MultipartFile file) {
     }
 
     @PatchMapping("/actualizar/{id}")
-    public ResponseEntity<?> actualizarSolicitud(@PathVariable Integer id, @RequestBody ActualizarSolicitudDTO dto,@RequestHeader(value = "X-User-Role", required = true) String rol){
+    public ResponseEntity<?> actualizarSolicitud(@PathVariable Integer id, @RequestPart("datos") ActualizarSolicitudDTO dto,@RequestPart(value = "archivos", required = false) List<MultipartFile> archivos,@RequestHeader(value = "X-User-Role", required = true) String rol){
 
-        boolean actualizado=servSolicitud.servActualizarSolicitud(id,dto, rol);
+        
+        boolean actualizado=servSolicitud.servActualizarSolicitud(id,dto, rol,archivos);
+
         if(actualizado){
-            return ResponseEntity.ok().body("{ \"mensaje\": \"La solicitud ha sido actualizada correctamente\" ");
+            return ResponseEntity.ok().body("{ \"mensaje\": \"La solicitud ha sido actualizada correctamente\"}");
         }
         else{
             return ResponseEntity.status(HttpStatus.CONFLICT).body("\"mensaje\": \"La solicitud NO se pudo actualizar\"");
